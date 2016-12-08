@@ -1,0 +1,81 @@
+<div id="output"></div>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/6.19.0/babel.js"></script>
+<script src="https://unpkg.com/react@15/dist/react.js"></script>
+<script src="https://unpkg.com/react-dom@15/dist/react-dom.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.2/lodash.js"></script>
+<script src="poissonDiscSampler.js"></script>
+
+<script type="text/babel">
+  class Card extends React.Component {
+    static defaultProps = {
+      width: 500,
+      height: 700,
+      radius: 20
+    }
+
+    constructor (props) {
+      super(props)
+      this.sampler = poissonDiscSampler(props.width, props.height, props.radius)
+    }
+
+    getPoints = () => {
+      const points = []
+      let sample
+
+      while (sample = this.sampler()) {
+        points.push(sample)
+      }
+
+      return points
+    }
+
+    getNearestPoints = (points, point, count = 5) => {
+      const filtered = _.without(points, point)
+
+      const sorted = _.sortBy(filtered, other => (
+        Math.sqrt(Math.pow(point.y - other.y, 2) + Math.pow(point.x - other.x, 2))
+      ))
+
+      return _.takeRight(sorted, count)
+    }
+
+    getShapes = points => {
+      const shapes = []
+      const point = points[~~(Math.random() * points.length)]
+
+      console.log(this.getNearestPoints(points, point, 5))
+
+      return shapes
+    }
+
+    render () {
+      const { width, height } = this.props
+      const points = this.getPoints()
+      // const shapes = this.getShapes(points)
+
+      const point = points[~~(Math.random() * points.length)]
+      const nearest = this.getNearestPoints(points, point, 5)
+
+      return (
+        <svg width={width} height={height}>
+          {points.map(([x, y]) => (
+            <circle cx={x} cy={y} r={1} fill='black' />
+          ))}
+
+          <circle cx={point[0]} cy={point[1]} r={5} stroke='red' fill='none' />
+
+          {nearest.map(([x, y]) => (
+            <circle cx={x} cy={y} r={5} stroke='blue' fill='none' />
+          ))}
+        </svg>
+      )
+    }
+  }
+
+  ReactDOM.render(
+    <Card />,
+    document.getElementById('output')
+  )
+</script>

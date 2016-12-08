@@ -1,0 +1,116 @@
+<style>
+  #output svg {
+    background: #161617;
+  }
+</style>
+
+<div id="output"></div>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/6.19.0/babel.js"></script>
+<script src="https://unpkg.com/react@15/dist/react.js"></script>
+<script src="https://unpkg.com/react-dom@15/dist/react-dom.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.2/lodash.js"></script>
+<script src="poissonDiscSampler.js"></script>
+
+<script type="text/babel">
+  class Card extends React.Component {
+    static defaultProps = {
+      width: 500,
+      height: 700,
+      colors: [
+        '#113A1C',
+        '#2C6135',
+        '#C88A1C',
+        '#071946',
+        '#fff',
+        '#253454',
+        '#CBAFA0',
+        '#771D06'
+      ]
+    }
+
+    getPoints = radius => {
+      const { width, height } = this.props
+      const sampler = poissonDiscSampler(width, height, radius)
+      const points = []
+
+      let sample
+
+      while (sample = sampler()) {
+        points.push(sample)
+      }
+
+      return points
+    }
+
+    getNearestPoints = (points, point, count = 5) => {
+      const filtered = _.without(points, point)
+
+      const sorted = _.sortBy(filtered, other => (
+        Math.sqrt(Math.pow(point[0] - other[0], 2) + Math.pow(point[1] - other[1], 2))
+      ))
+
+      return _.take(sorted, count)
+    }
+
+    getShapes = (points, count) => {
+      return _.times(count, i => {
+        const point = points[~~(Math.random() * points.length)]
+        const nearest = this.getNearestPoints(points, point, 8)
+
+        const sorted = _.sortBy(nearest, other => (
+          Math.atan2(point[1] - other[1], point[0] - other[0])
+        ))
+
+        const divided = _.flatten(_.map(sorted, (point, i) => {
+          const next = sorted[(i + 1) % sorted.length]
+
+          return [
+            point,
+            [(point[0] + next[0]) / 2,
+            (point[1] + next[1]) / 2]
+          ]
+        }))
+
+        const first = divided.shift(_.first(divided))
+
+        divided.push(first)
+        divided.push(divided[0])
+
+        const path = _.map(divided, ([x, y], i) => (
+          `${i === 0 ? 'M' : (i % 2 === 0) ? '' : 'Q'}${x} ${y}`
+        )).join(' ') + 'Z'
+
+        return path
+      })
+    }
+
+    render () {
+      const { width, height, colors } = this.props
+      const pointMaps = _.times(3, i => this.getPoints(20 * (i + 1)))
+      const shapeMaps = _.map(pointMaps, points => this.getShapes(points, 10))
+
+      return (
+        <svg width={width} height={height} onClick={() => this.forceUpdate()}>
+          {pointMaps.map(points => (
+            points.map(([x, y], i) => (
+              <circle key={i} cx={x} cy={y} r={1} fill='black' />
+            ))
+          ))}
+
+          {shapeMaps.map(shapes => (
+            shapes.map((path, i) => (
+              <path key={i} d={path} fill={colors[~~(Math.random() * colors.length)]} />
+            ))
+          ))}
+        </svg>
+      )
+    }
+  }
+
+  ReactDOM.render(
+    <Card />,
+    document.getElementById('output')
+  )
+</script>

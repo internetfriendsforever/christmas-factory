@@ -1,0 +1,84 @@
+<div id="output"></div>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/6.19.0/babel.js"></script>
+<script src="https://unpkg.com/react@15/dist/react.js"></script>
+<script src="https://unpkg.com/react-dom@15/dist/react-dom.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.2/lodash.js"></script>
+<script src="poissonDiscSampler.js"></script>
+
+<script type="text/babel">
+  class Card extends React.Component {
+    static defaultProps = {
+      width: 500,
+      height: 700,
+      radius: 20
+    }
+
+    constructor (props) {
+      super(props)
+      this.sampler = poissonDiscSampler(props.width, props.height, props.radius)
+    }
+
+    getPoints = () => {
+      const points = []
+      let sample
+
+      while (sample = this.sampler()) {
+        points.push(sample)
+      }
+
+      return points
+    }
+
+    getNearestPoints = (points, point, count = 5) => {
+      const filtered = _.without(points, point)
+
+      const sorted = _.sortBy(filtered, other => (
+        Math.sqrt(Math.pow(point[0] - other[0], 2) + Math.pow(point[1] - other[1], 2))
+      ))
+
+      return _.take(sorted, count)
+    }
+
+    getShapes = points => {
+      return _.times(10, i => {
+        const point = points[~~(Math.random() * points.length)]
+        const nearest = this.getNearestPoints(points, point, 10)
+
+        const sorted = _.sortBy(nearest, other => (
+          Math.atan2(point[1] - other[1], point[0] - other[0])
+        ))
+
+        const path = _.map(sorted, ([x, y], i) => (
+          `${i === 0 ? 'M' : 'L'}${x},${y}`
+        )).join(' ') + 'z'
+
+        return path
+      })
+    }
+
+    render () {
+      const { width, height } = this.props
+      const points = this.getPoints()
+      const shapes = this.getShapes(points)
+
+      return (
+        <svg width={width} height={height}>
+          {points.map(([x, y], i) => (
+            <circle key={i} cx={x} cy={y} r={1} fill='black' />
+          ))}
+
+          {shapes.map((path, i) => (
+            <path key={i} d={path} stroke='red' fill='none' />
+          ))}
+        </svg>
+      )
+    }
+  }
+
+  ReactDOM.render(
+    <Card />,
+    document.getElementById('output')
+  )
+</script>
